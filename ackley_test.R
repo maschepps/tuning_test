@@ -102,29 +102,45 @@ target_runner <- function(experiment, scenario){
   #            P3 = configuration[['c']],
   #            P4 = configuration[['d']],
   #            P5 = configuration[['e']])
-  a = metaOpt(FUN = ackley,
-              optimType = 'MIN',
-              algorithm = 'GA',
-              numVar    = 5,
-              rangeVar  = rangeV,
-              control = list(maxIter = 80, 
-                             Pm = configuration[['m']],
-                             Pc = configuration[['c']]))
+  # a = metaOpt(FUN = ackley,
+  #             optimType = 'MIN',
+  #             algorithm = 'GA',
+  #             numVar    = 5,
+  #             rangeVar  = rangeV,
+  #             control = list(maxIter = 80, 
+  #                            Pm = configuration[['m']],
+  #                            Pc = configuration[['c']]))
+  # 
+  a = metaOpt(costFunctionC, 
+              optimType = 'MIN', 
+              algorithm = "PSO", 
+              numVar = length(vecUpp), 
+              rangeVar = rangeV, 
+              control = list(numPopulation = 40,
+                             ci = configuration[['i']],
+                             cg = configuration[['g']],
+                             w = configuration[['w']],
+                             maxIter = 1000))
   time1 = proc.time() - start
   return(list(#cost = a$value,
               cost = a$optimumValue,
               time = time1[1]))
 }
+
+targetrunn
 library(tictoc)
 tic()
 scenario <- list(targetRunner = target_runner,
                  instances = NULL,
-                 maxExperiments = 3000,
+                 maxExperiments = 1000,
+                 parallel = 2,
                  # Do not create a logFile
-                 logFile = "iwantthis2.Rdata")
+                 logFile = "amgen_pso_race.Rdata"
+                 )
 parameters_table <- '
- m "" r (0.0001, 1)
- c "" r (0.0001, 1)
+ i "" r (0, 100)
+ g "" r (0, 100)
+ w "" r (0, 100)
  '
 
 ## We use the irace function readParameters to read this table:

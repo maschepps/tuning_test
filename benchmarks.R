@@ -9,6 +9,9 @@
 #schwefel_func - 420.9687, 420.9687 = -418.9829
 #styblinski_tang_func - -2.903534 = -39.165
 
+library(metaheuristicOpt)
+library(EmiR)
+
 list_of_objectives = c(ackley_func,
   bohachevsky_func,
   colville_func,
@@ -42,7 +45,19 @@ list_of_constraints =  list(ackley_bounds,
                          schwefel_bounds,
                          styblinski_tang_bounds)
 
+rangeV = matrix(t(data.frame(a = vecLow, b = vecUpp)), nrow = 2)
+algos = c('GWO', 'MFO')
 
+a = metaOpt(costFunctionC, 
+            optimType = 'MIN', 
+            algorithm = "PSO", 
+            numVar = length(vecUpp), 
+            rangeVar = rangeV, 
+            control = list(numPopulation = 40,
+                           ci = 2,
+                           cg = 2,
+                           w = 4,
+                           maxIter = 1000))
 
 for(i in 1:length(list_of_objectives)){
   print(i)
@@ -58,6 +73,8 @@ for(i in 1:length(list_of_objectives)){
   p3 <- parameter("x3", list_of_constraints[[i]][5], list_of_constraints[[i]][6], FALSE)
   p4 <- parameter("x4", list_of_constraints[[i]][7], list_of_constraints[[i]][8], FALSE)
   
+  
+  
   conf_algo <- config_bat(iterations = 100, population_size = 100)
   params = c(list(p1, p2),
              list(p3, p4))
@@ -68,7 +85,7 @@ for(i in 1:length(list_of_objectives)){
   }
   
   results <- minimize(algorithm_id = list("BAT"), 
-                      obj_func = list_of_objectives[[i]], 
+                      obj_func = costFunctionC, 
                       parameters = params,
                       config = conf_algo,
                       save_pop_history = T)
@@ -105,12 +122,61 @@ p3 <- parameter("x3", 0, 8, FALSE)
 p4 <- parameter("x4", 0, 8, FALSE)
 p5 <- parameter("x5", 0, 8, FALSE)
 p6 <- parameter("x6", 0, 8, FALSE)
-conf_algo <- config_bat(iterations = 100, population_size = 100)
-results <- minimize(algorithm_id = list("BAT"), 
-                    obj_func = D1grp, 
-                    parameters = list(p1, p2, p3, p4, p5, p6),
-                    config = conf_algo,
-                    save_pop_history = T)
+list_of_emir = c('ABC', 'BAT', "CS", 'GA', 'GSA', 'GWO', 'HS',
+                 'IHS', 'MFO', 'PS', 'SA' ,'WOA')
+
 print(results)
 
 
+
+library(irace)
+library(EmiR)
+target_runner <- function(experiment, scenario){
+  start = proc.time()
+  library(EmiR)
+  params = rbind(dataStudy$SitesLow,
+                 dataStudy$SitesUpp,
+                 rep(T, 40))
+  params = parameters(params)
+  configuration = experiment$configuration
+  conf_algo <- config_algo(algorithm_id = 'PS', 
+                           iterations = 100, 
+                           population_size = 100,
+                           cognitive = configuration[['i']],
+                           social = configuration[['g']],
+                           inertia = configuration[['w']])
+  results <- minimize(algorithm_id = list("PS"), 
+                      obj_func = costFunctionC, 
+                      parameters = params,
+                      config = conf_algo,
+                      save_pop_history = T)
+  time1 = proc.time() - start
+  return(list(#cost = a$value,
+    cost = results@best_cost,
+    # cost = a$optimumValue,
+    time = time1[1]))
+}
+
+library(tictoc)
+tic()
+scenario <- list(targetRunner = target_runner,
+                 instances = NULL,
+                 maxExperiments = 1000,
+                 parallel = 20,
+                 # Do not create a logFile
+                 logFile = "amgen_pso_race.Rdata"
+)
+parameters_table <- '
+ i "" r (0, 100)
+ g "" r (0, 100)
+ w "" r (0, 100)
+ '
+
+## We use the irace function readParameters to read this table:
+parameters <- readParameters(text = parameters_table)
+setwd('C:/Users/Admin/Desktop/Github/tuning')
+checkIraceScenario(scenario, parameters = parameters)
+ss = irace(scenario = scenario, parameters = parameters)
+toc()
+
+load("amgen_pso_race.Rdata")
